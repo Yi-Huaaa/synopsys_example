@@ -3,7 +3,10 @@
 * pseudo code
 ```
 for (round in ROUND) {
-  output_array = x_array[i] * y_array[i];
+  // this for loop will be parallelly run on GPU
+  for (i in N) {
+    output_array = x_array[i] * y_array[i];
+  }
 }
 
 ```
