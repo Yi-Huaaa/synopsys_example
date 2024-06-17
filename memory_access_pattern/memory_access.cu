@@ -8,11 +8,10 @@
 
 
 #define MEM_ACC_PAT_N 1024
-// #define MEM_ACC_PAT_CHECK_SHUFFLE  // check for shuffle
 #define MEM_ACC_PAT_CHECK_CORRECTNESS // check for correctness
 
 // CUDA kernel to mul elements in x and arrays
-__global__ void _mul(size_t N, int *x, int *y, int* mem_acc_pat, int *output) {
+__global__ void _mul(size_t N, size_t ROUND, int *x, int *y, int* mem_acc_pat, int *output) {
   // Get the thread idx
   int thd_idx = blockIdx.x * blockDim.x + threadIdx.x;
   // printf("inside, thd_idx = %d\n", thd_idx);
@@ -20,7 +19,7 @@ __global__ void _mul(size_t N, int *x, int *y, int* mem_acc_pat, int *output) {
   __syncthreads();
 
   if (thd_idx < N) {
-    for (size_t rd = 0; rd < 1000; rd++) {
+    for (size_t rd = 0; rd < ROUND; rd++) {
       // printf("thd_idx = %d, mem_acc_pat[thd_idx] = %d\n", thd_idx, mem_acc_pat[thd_idx]);
       output[mem_acc_pat[thd_idx]] = x[mem_acc_pat[thd_idx]] * y[mem_acc_pat[thd_idx]];
     }
@@ -49,31 +48,17 @@ void init (size_t N, int *x_host, int *y_host,
   std::random_device rd;
   std::mt19937 g(rd());
   std::shuffle(bad_mem_acc_patt.begin(), bad_mem_acc_patt.end(), g);
-
-
-
-#ifdef MEM_ACC_PAT_CHECK_SHUFFLE
-  // check shuffle
-  printf("good_mem_acc_patt (sz = %lu):\n", good_mem_acc_patt.size());
-  for (size_t i = 0; i < good_mem_acc_patt.size(); i++) {
-    printf("%d, ", good_mem_acc_patt[i]);
-  } printf("\n");
-
-  printf("bad_mem_acc_patt (sz = %lu):\n", bad_mem_acc_patt.size());
-  for (size_t i = 0; i < bad_mem_acc_patt.size(); i++) {
-    printf("%d, ", bad_mem_acc_patt[i]);
-  } printf("\n");
-#endif  
 }
 
-void check_correctness(int N, int *output) {
+void check_correctness(size_t N, int *output) {
   for (size_t i = 0; i < N; i++) {
     assert (output[i] == (10*i));
   }
 }
 
-int main(void) {
-  size_t N = MEM_ACC_PAT_N; 
+int main(int argc, char* argv[]){
+  size_t N = atoi(argv[1]); 
+  size_t ROUND = atoi(argv[2]);
   size_t N_size = N*sizeof(int);
 
   // Allocate CPU memory
@@ -118,12 +103,12 @@ int main(void) {
   cudaEventCreate(&stop);
   
   // pre run
-  _mul <<< 1, 1024 >>> (N, x_devc, y_devc, good_mem_acc_patt_devc, output_devc);
+  _mul <<< 1, 1024 >>> (N, ROUND, x_devc, y_devc, good_mem_acc_patt_devc, output_devc);
 
   // starting test ... 
   // Good pattern 
   cudaEventRecord(start);    
-    _mul <<< 1, 1024 >>> (N, x_devc, y_devc, good_mem_acc_patt_devc, output_devc);
+    _mul <<< 1, 1024 >>> (N, ROUND, x_devc, y_devc, good_mem_acc_patt_devc, output_devc);
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);
   cudaEventElapsedTime(&ms_good, start, stop);
@@ -133,12 +118,12 @@ int main(void) {
   cudaMemcpy(output_host, output_devc, N_size, cudaMemcpyDeviceToHost);
   // Host and device synchronization 
   cudaDeviceSynchronize();
-  check_correctness(N, output_host);
+  // check_correctness(N, output_host);
 #endif 
 
   // Bad pattern 
   cudaEventRecord(start);    
-    _mul <<< 1, 1024 >>> (N, x_devc, y_devc, bad_mem_acc_patt_devc, output_devc);
+    _mul <<< 1, 1024 >>> (N, ROUND, x_devc, y_devc, bad_mem_acc_patt_devc, output_devc);
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);
   cudaEventElapsedTime(&ms_bad, start, stop);  
