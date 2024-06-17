@@ -1,5 +1,9 @@
 # Example - memory_access_pattern
-* This code is used to give an example showing the importance of memory access pattern for GPU. 
+* This code is used to give an example showing the importance of memory access pattern for GPU.
+* Comparison run time between: 
+  1. good case: all memory access is aligned and coalesced 
+  1. bad case: NO aligned and NO coalesced (random_shuffle the data access order)
+
 * pseudo code
 ```
 for (round in ROUND) {
