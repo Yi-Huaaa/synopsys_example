@@ -12,13 +12,15 @@ for (round in ROUND) {
 ```
 
 # Compile and Results: 
-* `clear && nvcc memory_access.cu -o memory_access && ./memory_access 1024 1000`
+* Compile and run: `clear && nvcc memory_access.cu -o memory_access && ./memory_access 16384 10000`
   * N = 1024, ROUND = 1000
+* Results: 
 ```
-ms_good = 2.172 (ms), ms_bad = 2.852 (ms)
+ms_good = 21.170 (ms), ms_bad = 41.809 (ms)
 ```
-
-* `bash run.sh` 
+OR\\
+* Compile and run: `bash run.sh` 
+* Results: 
 ```
 Running with round=10
 N=1024
