@@ -11,7 +11,7 @@
 #define MEM_ACC_PAT_CHECK_CORRECTNESS // check for correctness
 
 // CUDA kernel to mul elements in x and arrays
-__global__ void _mul(size_t N, size_t ROUND, int *x, int *y, int* mem_acc_pat, int *output) {
+__global__ void _mul(size_t N, int *x, int *y, int* mem_acc_pat, int *output) {
   // Get the thread idx
   int thd_idx = blockIdx.x * blockDim.x + threadIdx.x;
   // printf("inside, thd_idx = %d\n", thd_idx);
@@ -19,10 +19,8 @@ __global__ void _mul(size_t N, size_t ROUND, int *x, int *y, int* mem_acc_pat, i
   __syncthreads();
 
   if (thd_idx < N) {
-    for (size_t rd = 0; rd < ROUND; rd++) {
-      // printf("thd_idx = %d, mem_acc_pat[thd_idx] = %d\n", thd_idx, mem_acc_pat[thd_idx]);
-      output[mem_acc_pat[thd_idx]] = x[mem_acc_pat[thd_idx]] * y[mem_acc_pat[thd_idx]];
-    }
+    // printf("thd_idx = %d, mem_acc_pat[thd_idx] = %d\n", thd_idx, mem_acc_pat[thd_idx]);
+    output[mem_acc_pat[thd_idx]] = x[mem_acc_pat[thd_idx]] * y[mem_acc_pat[thd_idx]];
   }
 }
 
@@ -103,13 +101,19 @@ int main(int argc, char* argv[]){
   cudaEventCreate(&stop);
   
   // pre run
-  _mul <<< 1, 1024 >>> (N, ROUND, x_devc, y_devc, good_mem_acc_patt_devc, output_devc);
+  size_t blocks = (N+1024-1)/1024;
+  size_t threads = 1024; 
+  // printf("blocks = %lu, threads = %lu\n", blocks, threads);
+
+  _mul <<< blocks, threads >>> (N, x_devc, y_devc, good_mem_acc_patt_devc, output_devc);
 
   // starting test ... 
   // Good pattern 
-  cudaEventRecord(start);    
-    _mul <<< 1, 1024 >>> (N, ROUND, x_devc, y_devc, good_mem_acc_patt_devc, output_devc);
-  cudaEventRecord(stop);
+  cudaEventRecord(start);  
+  for (size_t rd = 0; rd < ROUND; rd++) {
+    _mul <<< blocks, threads >>> (N, x_devc, y_devc, good_mem_acc_patt_devc, output_devc);
+  }
+    cudaEventRecord(stop);
   cudaEventSynchronize(stop);
   cudaEventElapsedTime(&ms_good, start, stop);
 
@@ -122,13 +126,15 @@ int main(int argc, char* argv[]){
 #endif 
 
   // Bad pattern 
-  cudaEventRecord(start);    
-    _mul <<< 1, 1024 >>> (N, ROUND, x_devc, y_devc, bad_mem_acc_patt_devc, output_devc);
+  cudaEventRecord(start); 
+  for (size_t rd = 0; rd < ROUND; rd++) {
+    _mul <<< blocks, threads >>> (N, x_devc, y_devc, bad_mem_acc_patt_devc, output_devc);
+  }
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);
   cudaEventElapsedTime(&ms_bad, start, stop);  
   
-  printf("ms_good = %.3lf, ms_bad = %.3lf\n", ms_good, ms_bad);
+  printf("ms_good = %.3lf (ms), ms_bad = %.3lf (ms)\n", ms_good, ms_bad);
 
 #ifdef MEM_ACC_PAT_CHECK
   // Check correctness 
