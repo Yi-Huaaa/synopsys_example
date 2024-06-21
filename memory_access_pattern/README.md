@@ -14,13 +14,13 @@ for (round in ROUND) {
 }
 
 ```
-
+<!-- 
 # File structure
 ~/synopsys/synopsys_example/memory_access_pattern
 |--- cpu_memory_access.cpp
 |--- memory_access.cu
 |--- README.md
-|--- run.sh
+|--- run.sh -->
 
 
 # Compile and Results: 
