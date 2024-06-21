@@ -10,16 +10,16 @@
 #define MEM_ACC_PAT_N 1024
 #define MEM_ACC_PAT_CHECK_CORRECTNESS // check for correctness
 
+
+/* Device version */
 // CUDA kernel to mul elements in x and arrays
 __global__ void _mul(size_t N, int *x, int *y, int* mem_acc_pat, int *output) {
   // Get the thread idx
   int thd_idx = blockIdx.x * blockDim.x + threadIdx.x;
-  // printf("inside, thd_idx = %d\n", thd_idx);
   
   __syncthreads();
 
   if (thd_idx < N) {
-    // printf("thd_idx = %d, mem_acc_pat[thd_idx] = %d\n", thd_idx, mem_acc_pat[thd_idx]);
     output[mem_acc_pat[thd_idx]] = x[mem_acc_pat[thd_idx]] * y[mem_acc_pat[thd_idx]];
   }
 }
@@ -54,7 +54,12 @@ void check_correctness(size_t N, int *output) {
   }
 }
 
+int get_GPU_Prop();
+
 int main(int argc, char* argv[]){
+  // int aaa = get_GPU_Prop();
+  // printf("aaa = %d\n", aaa);
+  
   size_t N = atoi(argv[1]); 
   size_t ROUND = atoi(argv[2]);
   size_t N_size = N*sizeof(int);
@@ -100,11 +105,11 @@ int main(int argc, char* argv[]){
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
   
-  // pre run
   size_t blocks = (N+1024-1)/1024;
   size_t threads = 1024; 
   // printf("blocks = %lu, threads = %lu\n", blocks, threads);
 
+  // pre run
   _mul <<< blocks, threads >>> (N, x_devc, y_devc, good_mem_acc_patt_devc, output_devc);
 
   // starting test ... 
@@ -157,3 +162,39 @@ int main(int argc, char* argv[]){
 
   return 0;
 }
+
+
+int get_GPU_Prop() {
+  cudaDeviceProp deviceProp;
+  cudaGetDeviceProperties(&deviceProp, 0);
+  printf("deviceProp.clockRate = %d\n", deviceProp.clockRate);
+  printf("deviceProp.totalGlobalMem = %zu\n", deviceProp.totalGlobalMem);
+  printf("deviceProp.warpSize = %d\n", deviceProp.warpSize);
+  printf("deviceProp.totalConstMem = %zu\n", deviceProp.totalConstMem);
+  printf("deviceProp.canMapHostMemory = %d\n", deviceProp.canMapHostMemory);
+  printf("deviceProp.minor = %d\n", deviceProp.minor); // Minor compute capability, e.g. cuda 9.0
+
+  // about shared memory 
+  printf("\n");
+  printf("deviceProp.sharedMemPerBlockOptin = %zu bytes\n", deviceProp.sharedMemPerBlockOptin);
+  printf("deviceProp.sharedMemPerBlock = %zu bytes\n", deviceProp.sharedMemPerBlock);
+  printf("deviceProp.sharedMemPerMultiprocessor = %zu bytes\n", deviceProp.sharedMemPerMultiprocessor);
+  
+  // about SM and block
+  printf("\n");
+  printf("deviceProp.multiProcessorCount = %d\n", deviceProp.multiProcessorCount);
+  printf("deviceProp.maxBlocksPerMultiProcessor = %d\n", deviceProp.maxBlocksPerMultiProcessor);
+  printf("deviceProp.maxThreadsPerBlock = %d\n", deviceProp.maxThreadsPerBlock);
+  printf("deviceProp.maxThreadsPerMultiProcessor = %d\n", deviceProp.maxThreadsPerMultiProcessor);
+  
+  // about registers  
+  printf("\n");  
+  printf("deviceProp.regsPerBlock = %d\n", deviceProp.regsPerBlock);
+  printf("deviceProp.regsPerMultiprocessor = %d\n", deviceProp.regsPerMultiprocessor);
+
+  // something
+  printf("\n");
+  printf("deviceProp.maxGridSize[0] = %d, deviceProp.maxGridSize[1] = %d, deviceProp.maxGridSize[2] = %d\n", deviceProp.maxGridSize[0], deviceProp.maxGridSize[1], deviceProp.maxGridSize[2]);
+  return deviceProp.clockRate;
+}
+
