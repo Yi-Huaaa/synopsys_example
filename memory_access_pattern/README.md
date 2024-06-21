@@ -15,15 +15,23 @@ for (round in ROUND) {
 
 ```
 
+# File structure
+~/synopsys/synopsys_example/memory_access_pattern
+|--- cpu_memory_access.cpp
+|--- memory_access.cu
+|--- README.md
+|--- run.sh
+
+
 # Compile and Results: 
-* CPU Compile and run: `clear && g++ cpu_memory_access.cpp -o cpu_memory_access && ./cpu_memory_access 16384 10000`
+* CPU version Compile and run: `clear && g++ cpu_memory_access.cpp -o cpu_memory_access && ./cpu_memory_access 16384 10000`
   * N = 16384, ROUND = 10000
 * Results: 
 ```
 449.33 (ms)
 ```
 
-* GPU Compile and run: `clear && nvcc memory_access.cu -o memory_access && ./memory_access 16384 10000`
+* GPU version Compile and run: `clear && nvcc memory_access.cu -o memory_access && ./memory_access 16384 10000`
   * N = 16384, ROUND = 10000
 * Results: 
 ```
